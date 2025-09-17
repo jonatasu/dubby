@@ -1,0 +1,9 @@
+{% extends 'base.html' %} {% block content %}
+<section>
+  <p>Processamento concluído.</p>
+  <p>
+    <a href="/outputs/{{ output_file }}" download>Baixar arquivo dublado</a>
+  </p>
+  <p><a href="/">Voltar</a></p>
+</section>
+{% endblock %}

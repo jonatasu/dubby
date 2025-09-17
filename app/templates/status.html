@@ -1,0 +1,7 @@
+{% extends 'base.html' %} {% block content %}
+<section>
+  <h2>Status do sistema</h2>
+  <pre style="white-space: pre-wrap">{{ status | tojson(indent=2) }}</pre>
+  <p><a href="/">Voltar</a></p>
+</section>
+{% endblock %}

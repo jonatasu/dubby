@@ -1,3 +1,82 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*$py.class
+
+# Byte-compiled / optimized / DLL files
+*.so
+
+# Distribution / packaging
+build/
+dist/
+downloads/
+eggs/
+.eggs/
+sdist/
+wheels/
+share/python-wheels/
+pip-wheel-metadata/
+*.egg-info/
+*.egg
+MANIFEST
+
+# Unit test / coverage reports
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.tox/
+.nox/
+coverage.xml
+.coverage
+.coverage.*
+htmlcov/
+
+# Environments
+.env
+.envrc
+.venv/
+.venv311/
+venv/
+ENV/
+env/
+env.bak/
+venv.bak/
+
+# Project data (do not version large/generated data)
+models/
+uploads/
+outputs/
+data/
+
+# OS / Editor
+.DS_Store
+.idea/
+.vscode/
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Jupyter
+.ipynb_checkpoints
+
+# pytype / mypy / pyre
+.pytype/
+.mypy_cache/
+.pyre/
+
+# Misc
+.pypirc
+.cursorignore
+.cursorindexingignore
+.pdm-python
+.pdm-build/
+.pixi
+__pypackages__/
+
+<<<<<<< HEAD
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
@@ -7,6 +86,13 @@ __pycache__/
 *.so
 
 # Distribution / packaging
+=======
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+>>>>>>> 39e09c8 (feat: initial FastAPI app with UI, pipeline (ASR->translate->TTS), Docker, PythonAnywhere setup, model prep/test, status page and logs)
 .Python
 build/
 develop-eggs/
@@ -20,6 +106,7 @@ parts/
 sdist/
 var/
 wheels/
+<<<<<<< HEAD
 share/python-wheels/
 *.egg-info/
 .installed.cfg
@@ -205,3 +292,58 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+=======
+pip-wheel-metadata/
+share/python-wheels/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+*.egg
+
+# Virtualenvs
+.venv/
+.venv311/
+venv/
+ENV/
+
+# Project data
+.env
+models/
+uploads/
+outputs/
+
+# OS files
+.DS_Store
+.idea/
+.vscode/# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+
+# macOS
+.DS_Store
+
+# Env
+.env
+
+# Models & data
+models/
+data/
+uploads/
+outputs/
+
+# Python packaging
+*.egg-info/
+dist/
+build/
+
+# IDE
+.vscode/
+.idea/
+>>>>>>> 39e09c8 (feat: initial FastAPI app with UI, pipeline (ASR->translate->TTS), Docker, PythonAnywhere setup, model prep/test, status page and logs)

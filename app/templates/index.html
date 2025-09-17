@@ -1,0 +1,63 @@
+{% extends 'base.html' %}
+{% block content %}
+  <section>
+    {% if status and not status.ffmpeg.available %}
+      <div class="alert">
+        <strong>ffmpeg não encontrado.</strong> Selecione "Áudio apenas" para processar sem remux de vídeo.
+      </div>
+    {% endif %}
+    {% if error %}
+      <div class="alert">
+        <strong>Erro:</strong> {{ error }}
+        <div class="hint">
+          Dicas: se sua rede usa proxy/SSL interceptado, baixe os modelos do Whisper manualmente e aponte ASR_MODEL para o caminho local.
+        </div>
+      </div>
+    {% endif %}
+    {% if success %}
+      <div class="success">
+        {{ success }}
+      </div>
+    {% endif %}
+    <form action="/upload" method="post" enctype="multipart/form-data">
+      <label>Arquivo de vídeo/áudio:
+        <input type="file" name="file" required accept="video/*,audio/*" />
+      </label>
+      <div class="row">
+        <label>Idioma de entrada:
+          <select name="src_lang">
+            {% for code, label in lang_choices %}
+              <option value="{{ code }}">{{ label }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <label>Idioma de saída:
+          <select name="dst_lang">
+            {% for code, label in lang_choices if code != 'auto' %}
+              <option value="{{ code }}" {% if code == 'en' %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </label>
+      </div>
+      <label style="display:flex;align-items:center;gap:6px;">
+        <input type="checkbox" name="audio_only" value="true" /> Áudio apenas (sem remux de vídeo)
+      </label>
+      <button type="submit">Processar</button>
+    </form>
+  </section>
+
+  <section>
+    <h3>Preparar modelo (offline)</h3>
+    <form action="/prepare-model" method="post">
+      <label>Repo do modelo HF:
+        <input type="text" name="model" value="Systran/faster-whisper-medium" />
+      </label>
+      <label>Revisão (opcional):
+        <input type="text" name="revision" placeholder="main" />
+      </label>
+      <button type="submit">Baixar e configurar</button>
+    </form>
+  </section>
+
+  <p><a href="/status">Ver status do sistema</a></p>
+{% endblock %}
