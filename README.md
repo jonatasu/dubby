@@ -58,7 +58,7 @@ docker compose up --build
 
 ### Imagem oficial (GHCR)
 
-Quando o CI publicar (push na main ou tags v*.*.*), a imagem fica disponível no GHCR:
+Quando o CI publicar (push na main ou tags v*.*.\*), a imagem fica disponível no GHCR:
 
 ```zsh
 docker pull ghcr.io/jonatasu/dubby:latest
