@@ -1,5 +1,7 @@
 # dubby
 
+![CI](https://github.com/jonatasu/dubby/actions/workflows/ci.yml/badge.svg)
+
 Tradução e dublagem de vídeos/áudios via web UI. Pipeline: extração de áudio → transcrição (ASR) → tradução → síntese (voz clonada futura; fallback simples) → remux.
 
 Estado: protótipo funcional com TTS de fallback (tom). Substitua por clonagem de voz (OpenVoice/serviço) quando desejar.
