@@ -56,6 +56,22 @@ Ou via docker-compose:
 docker compose up --build
 ```
 
+### Imagem oficial (GHCR)
+
+Quando o CI publicar (push na main ou tags v*.*.*), a imagem fica disponível no GHCR:
+
+```zsh
+docker pull ghcr.io/jonatasu/dubby:latest
+# ou uma tag específica (ex.: v0.1.0)
+docker pull ghcr.io/jonatasu/dubby:v0.1.0
+
+docker run --rm -it -p 8000:8000 \
+  -v "$PWD/models:/app/models" \
+  -v "$PWD/uploads:/app/uploads" \
+  -v "$PWD/outputs:/app/outputs" \
+  ghcr.io/jonatasu/dubby:latest
+```
+
 ## Deploy em Cloud
 
 - Qualquer plataforma que rode contêiner (Railway, Render, Fly.io, etc.).
