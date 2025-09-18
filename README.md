@@ -1,70 +1,52 @@
 # dubby
 
 ![CI](https://github.com/jonatasu/dubby/actions/workflows/ci.yml/badge.svg)
+![Python](https://img.shields.io/badge/python-3.12%2B-blue)
+![Docker](https://img.shields.io/badge/docker-ready-green)
 
-Tradução e dublagem de vídeos/áudios via web UI. Pipeline: extração de áudio → transcrição (ASR) → tradução → síntese (voz clonada futura; fallback simples) → remux.
+**Tradução e dublagem de vídeos/áudios com web UI moderna**
 
-Estado: protótipo funcional com TTS de fallback (tom). Substitua por clonagem de voz (OpenVoice/serviço) quando desejar.
+Pipeline completo: extração de áudio → transcrição (ASR) → tradução → síntese de voz → remux
 
-## Requisitos (macOS)
+✅ **Funcionalidades ativas:**
 
-- Homebrew: https://brew.sh
-- ffmpeg (via Homebrew)
-- Python 3.11+
+- 🎤 ASR com Faster-Whisper (modelo local)
+- 🌐 Tradução com argostranslate (EN↔PT, EN↔ES)
+- 🔊 TTS com vozes nativas por idioma (pyttsx3)
+- 🎬 Processamento de vídeo com FFmpeg
+- 🐳 Deploy com Docker completo
+- 🚀 Instalação automática com bootstrap
 
-```zsh
-# Dependências de sistema
-brew install ffmpeg
+## 🚀 Instalação Rápida (Recomendado)
 
-# Ambiente Python (recomendado)
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
+### Opção 1: Bootstrap Automático
+
+```bash
+# Clone o repositório
+git clone https://github.com/jonatasu/dubby.git
+cd dubby
+
+# Execute o bootstrap (instala tudo automaticamente)
+python3 scripts/bootstrap.py
 ```
 
-Opcional para tradução offline melhor:
+O script bootstrap:
 
-```zsh
-pip install argostranslate
-python scripts/bootstrap_models.py
-```
+- ✅ Verifica Python 3.12+
+- ✅ Instala dependências do sistema
+- ✅ Cria ambiente virtual
+- ✅ Instala dependências Python
+- ✅ Baixa modelo ASR
+- ✅ Inicializa tradução
+- ✅ Testa funcionalidade
 
-## Executar localmente
+### Opção 2: Docker (Zero Setup)
 
-```zsh
-# Ative o ambiente se ainda não estiver
-source .venv/bin/activate
-
-# Rodar o servidor
-uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
-```
-
-Abra no navegador: http://localhost:8000
-
-## Docker
-
-```zsh
-# Build
-docker build -t dubby:local .
-# Run
-docker run --rm -it -p 8000:8000 -v "$PWD/models:/app/models" -v "$PWD/uploads:/app/uploads" -v "$PWD/outputs:/app/outputs" dubby:local
-```
-
-Ou via docker-compose:
-
-```zsh
-docker compose up --build
-```
-
-### Imagem oficial (GHCR)
-
-Quando o CI publicar (push na main ou tags v*.*.\*), a imagem fica disponível no GHCR:
-
-```zsh
+```bash
+# Pull da imagem oficial
 docker pull ghcr.io/jonatasu/dubby:latest
-# ou uma tag específica (ex.: v0.1.0)
-docker pull ghcr.io/jonatasu/dubby:v0.1.0
 
+# Execute com volumes persistentes
 docker run --rm -it -p 8000:8000 \
   -v "$PWD/models:/app/models" \
   -v "$PWD/uploads:/app/uploads" \
@@ -72,32 +54,326 @@ docker run --rm -it -p 8000:8000 \
   ghcr.io/jonatasu/dubby:latest
 ```
 
-## Deploy em Cloud
+## 📋 Requisitos do Sistema
 
-- Qualquer plataforma que rode contêiner (Railway, Render, Fly.io, etc.).
-- Use a imagem gerada pelo Dockerfile. Exponha a porta 8000.
-- Opcional: monte volumes persistentes para `models/`, `uploads/` e `outputs/`.
-- Variáveis de ambiente: veja `.env.example`.
+### Dependências Obrigatórias
 
-### PythonAnywhere (WSGI/ASGI)
+**Python 3.12+** (versão estável mais recente)
 
-PythonAnywhere suporta apps ASGI. Passos gerais:
-
-1. Crie um virtualenv com Python 3.11 e instale as dependências do `requirements.txt`.
-2. No painel da aplicação web, configure como app ASGI e aponte o módulo `asgi:application` deste projeto (arquivo `asgi.py` na raiz).
-3. Static files: mapeie `/static` para `app/static` e `/outputs` para `outputs` se quiser servir downloads direto da plataforma.
-4. ffmpeg: se não houver ffmpeg no host, o app mostrará um erro claro. Alternativas:
-
-- Processar apenas áudio (uploads .wav/.mp3 e entregar `*.dubbed.wav`).
-- Processar vídeo externamente (local/Docker) e apenas servir os resultados.
-
-5. Modelos offline: rode o script para baixar o modelo e atualizar `.env`:
+**Sistema (macOS):**
 
 ```bash
-python scripts/download_whisper_model.py --model Systran/faster-whisper-medium
+brew install ffmpeg git python@3.12
 ```
 
-Isso gravará em `models/` e definirá `ASR_MODEL` no `.env` para o caminho local.
+**Sistema (Ubuntu/Debian):**
+
+```bash
+sudo apt-get update
+sudo apt-get install ffmpeg git python3.12 python3.12-venv espeak espeak-data
+```
+
+**Sistema (CentOS/RHEL):**
+
+```bash
+sudo yum install ffmpeg git python3.12 espeak
+```
+
+### Dependências Python (Automáticas)
+
+O arquivo `requirements.txt` inclui **todas as dependências com versões fixas**:
+
+```
+# Core Framework
+fastapi==0.115.0              # Web framework
+uvicorn[standard]==0.30.6      # ASGI server
+pydantic-settings==2.5.2      # Configuration
+
+# Audio/Speech Processing
+faster-whisper==1.0.3         # ASR
+pyttsx3==2.99                  # TTS
+scipy==1.14.0                  # Audio processing
+soundfile==0.12.1              # Audio I/O
+ffmpeg-python==0.2.0           # Video processing
+
+# Translation (Fixed Versions)
+argostranslate==1.9.6          # Translation engine
+ctranslate2==4.6.0             # Translation backend
+sacremoses==0.0.53             # Text preprocessing
+sentencepiece==0.2.0           # Tokenization
+stanza==1.1.1                  # NLP pipeline
+
+# PyTorch Stack
+torch==2.5.1                   # Deep learning
+torchvision==0.20.1            # Vision utilities
+torchaudio==2.5.1              # Audio utilities
+
+# Testing
+pytest==8.3.2                  # Testing framework
+```
+
+## 🏃‍♂️ Executar Localmente
+
+### Método 1: Make (Recomendado)
+
+```bash
+# Instalar dependências e executar
+make run
+
+# Ou apenas executar (se já instalado)
+source .venv/bin/activate
+uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+```
+
+### Método 2: Tasks do VS Code
+
+Se estiver usando VS Code, use as tasks configuradas:
+
+- `Ctrl+Shift+P` → "Tasks: Run Task" → "Run dubby (uvicorn)"
+
+### Acesso
+
+🌐 **Web Interface:** http://localhost:8000
+
+## 🐳 Docker
+
+### Local Build & Run
+
+```bash
+# Build da imagem
+docker build -t dubby:local .
+
+# Execute com volumes (dados persistentes)
+docker run --rm -it -p 8000:8000 \
+  -v "$PWD/models:/app/models" \
+  -v "$PWD/uploads:/app/uploads" \
+  -v "$PWD/outputs:/app/outputs" \
+  dubby:local
+```
+
+### Docker Compose (Recomendado)
+
+```bash
+# Build e execute em uma linha
+docker compose up --build
+
+# Execute em background
+docker compose up -d --build
+```
+
+### Imagem Oficial (GHCR)
+
+**Imagens pré-construídas** estão disponíveis no GitHub Container Registry:
+
+```bash
+# Última versão (main branch)
+docker pull ghcr.io/jonatasu/dubby:latest
+
+# Versão específica (release tags)
+docker pull ghcr.io/jonatasu/dubby:v1.0.0
+
+# Execute a imagem oficial
+docker run --rm -it -p 8000:8000 \
+  -v "$PWD/models:/app/models" \
+  -v "$PWD/uploads:/app/uploads" \
+  -v "$PWD/outputs:/app/outputs" \
+  ghcr.io/jonatasu/dubby:latest
+```
+
+## ☁️ Deploy em Produção
+
+### Plataformas Suportadas
+
+**Container-based (Recomendado):**
+
+- 🚀 Railway
+- 🔸 Render
+- ✈️ Fly.io
+- ☁️ Google Cloud Run
+- 🔷 Azure Container Instances
+- 📦 AWS ECS/Fargate
+
+**Configuração básica:**
+
+- 🐳 Use a imagem: `ghcr.io/jonatasu/dubby:latest`
+- 🔌 Exponha a porta: `8000`
+- 💾 Monte volumes persistentes para: `models/`, `uploads/`, `outputs/`
+- ⚙️ Variáveis de ambiente: veja `.env.example`
+
+### PythonAnywhere (ASGI)
+
+PythonAnywhere suporta aplicações ASGI:
+
+1. **Ambiente virtual:** Crie com Python 3.12+ e instale `requirements.txt`
+2. **Configuração ASGI:** Aponte para `asgi:application` (arquivo `asgi.py`)
+3. **Arquivos estáticos:** Mapeie `/static` para `app/static` e `/outputs` para `outputs`
+4. **FFmpeg:** Se não disponível, o app funcionará apenas com áudio
+5. **Modelo offline:** Execute `python scripts/bootstrap.py` para configuração completa
+
+## 🧪 Desenvolvimento e Testes
+
+### Executar Testes
+
+```bash
+# Todos os testes
+make test
+
+# Com coverage
+pytest --cov=app tests/
+
+# Testes específicos
+pytest tests/test_health.py -v
+```
+
+### Estrutura de Testes
+
+```
+tests/
+├── test_health.py          # Testes de endpoints
+├── test_basic.py           # Testes de UI
+└── test_services.py        # Testes de serviços (ASR, tradução, TTS)
+```
+
+### Linting e Formatação
+
+```bash
+# Ruff (linter)
+ruff check .
+
+# Black (formatação)
+black .
+
+# Type checking
+mypy app/
+```
+
+## 🔧 Troubleshooting
+
+### Problemas Comuns
+
+**1. Erro de importação argostranslate**
+
+```bash
+# Reinstale com versões fixas
+pip install -r requirements.txt --force-reinstall
+```
+
+**2. Modelo ASR não encontrado**
+
+```bash
+# Re-baixe o modelo
+python scripts/download_whisper_model.py
+```
+
+**3. TTS não funciona (macOS)**
+
+```bash
+# Verifique se o sistema tem vozes instaladas
+say "test" # Deve funcionar
+```
+
+**4. FFmpeg não encontrado**
+
+```bash
+# macOS
+brew install ffmpeg
+
+# Ubuntu/Debian
+sudo apt-get install ffmpeg
+
+# Verifique instalação
+ffmpeg -version
+```
+
+**5. Problemas de permissão (Docker)**
+
+```bash
+# Execute com usuário atual
+docker run --user $(id -u):$(id -g) ...
+```
+
+### Logs e Debug
+
+```bash
+# Logs detalhados
+export DEBUG=1
+uvicorn app.main:app --log-level debug
+
+# Logs Docker
+docker logs container_name
+
+# Health check
+curl http://localhost:8000/health
+```
+
+## 📊 Status do Projeto
+
+### ✅ Funcionalidades Implementadas
+
+- [x] **ASR (Automatic Speech Recognition)**
+  - Faster-Whisper com modelo local
+  - Suporte a múltiplos idiomas
+  - Detecção automática de idioma
+- [x] **Tradução**
+  - argostranslate offline
+  - Pares: EN↔PT, EN↔ES (expansível)
+  - Instalação automática de modelos
+- [x] **TTS (Text-to-Speech)**
+  - pyttsx3 com vozes nativas
+  - Vozes específicas por idioma
+  - Configuração automática de qualidade
+- [x] **Processamento de Mídia**
+  - FFmpeg para vídeo/áudio
+  - Extração e remux automático
+  - Suporte a múltiplos formatos
+- [x] **Web Interface**
+  - Upload de arquivos
+  - Seleção de idiomas
+  - Download de resultados
+  - Status em tempo real
+- [x] **Deploy e CI/CD**
+  - Docker completo
+  - GitHub Actions
+  - GHCR publishing
+  - Health checks
+
+### 🔮 Roadmap Futuro
+
+- [ ] **Voice Cloning** (OpenVoice, RVC, Coqui TTS)
+- [ ] **Tradução melhorada** (Google Translate API, Azure)
+- [ ] **Streaming processing** (chunks em tempo real)
+- [ ] **Multi-language UI** (i18n)
+- [ ] **API keys management** (serviços externos)
+- [ ] **Batch processing** (múltiplos arquivos)
+
+## 📝 Licença
+
+Este projeto está licenciado sob a [MIT License](LICENSE).
+
+## 🤝 Contribuindo
+
+1. Fork o projeto
+2. Crie uma branch: `git checkout -b feature/amazing-feature`
+3. Commit suas mudanças: `git commit -m 'Add amazing feature'`
+4. Push para a branch: `git push origin feature/amazing-feature`
+5. Abra um Pull Request
+
+### Desenvolvimento Local
+
+```bash
+# Setup completo
+python scripts/bootstrap.py
+
+# Executar com reload
+make run
+
+# Testes antes do commit
+make test
+```
+
+---
+
+**✨ Dubby** - Powered by FastAPI, Faster-Whisper, argostranslate, and pyttsx3
 
 ## Uso
 

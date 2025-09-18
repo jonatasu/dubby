@@ -17,15 +17,23 @@ async def process_media(input_media: Path, src_lang: str, dst_lang: str, audio_o
 
     # 2) ASR com timestamps
     segments = transcribe(wav_path, language=None if src_lang == "auto" else src_lang)
+    print(f"[DEBUG] ASR encontrou {len(segments)} segmentos:")
+    for i, seg in enumerate(segments[:3]):  # Mostra apenas os primeiros 3
+        print(f"  [{i}] {seg.start:.2f}-{seg.end:.2f}s: '{seg.text}'")
 
     # 3) Tradução segmento a segmento
     translated_segments: list[tuple[float, float, str]] = []
     for seg in segments:
-        text = translate_text(seg.text, src_lang if src_lang != "auto" else "auto", dst_lang)
+        # Use src_lang detectado ou configurado para tradução
+        source_language = src_lang if src_lang != "auto" else "en"  # Fallback para inglês se auto
+        text = translate_text(seg.text, source_language, dst_lang)
         translated_segments.append((seg.start, seg.end, text))
+        if len(translated_segments) <= 3:  # Debug apenas os primeiros 3
+            print(f"  [TRAD {source_language}->{dst_lang}] '{seg.text}' -> '{text}'")
 
-    # 4) TTS/clonagem de voz (fallback gera tons)
-    audio = synthesize_segments(translated_segments, sr=16000)
+    # 4) TTS/clonagem de voz (com idioma de destino)
+    print(f"[DEBUG] Gerando TTS em {dst_lang} para {len(translated_segments)} segmentos traduzidos")
+    audio = synthesize_segments(translated_segments, target_language=dst_lang, sr=16000)
     dubbed_wav = settings.outputs_dir / f"{input_media.stem}.dubbed.wav"
     save_wav(dubbed_wav, audio, sr=16000)
 
