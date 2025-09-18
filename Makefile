@@ -11,7 +11,7 @@ run:
 	. .venv/bin/activate && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
 test:
-	. .venv/bin/activate && pytest -q
+	. .venv/bin/activate && PYTHONPATH=. pytest -q
 
 model:
 	. .venv/bin/activate && python scripts/download_whisper_model.py --model Systran/faster-whisper-medium

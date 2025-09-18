@@ -72,7 +72,7 @@ async def upload(
         result_path = await process_media(input_path, src_lang, dst_lang, audio_only=audio_only)
     except Exception as e:
         # Mostra erro amigável na UI (ex.: problemas de rede/SSL ao baixar modelo)
-        return templates.TemplateResponse("index.html", base_context(request, error=str(e))), 400
+        return templates.TemplateResponse("index.html", base_context(request, error=str(e)))
 
     return templates.TemplateResponse(
         "result.html",
@@ -100,7 +100,7 @@ async def prepare_model(
         return templates.TemplateResponse("index.html", base_context(request, success=msg))
     except Exception as e:
         log_event(f"prepare-model error: {e}")
-        return templates.TemplateResponse("index.html", base_context(request, error=f"Falha ao preparar o modelo: {e}")), 400
+        return templates.TemplateResponse("index.html", base_context(request, error=f"Falha ao preparar o modelo: {e}"))
 
 
 @router.post("/test-asr", response_class=HTMLResponse)
@@ -129,4 +129,4 @@ async def test_asr(request: Request):
         return templates.TemplateResponse("index.html", base_context(request, success=msg))
     except Exception as e:
         log_event(f"test-asr error: {e}")
-        return templates.TemplateResponse("index.html", base_context(request, error=str(e))), 400
+        return templates.TemplateResponse("index.html", base_context(request, error=str(e)))
