@@ -457,6 +457,33 @@ make test
 
 **✨ Dubby** - Powered by FastAPI, Faster-Whisper, argostranslate, and pyttsx3
 
+## 🌐 Tradução Offline (Argos)
+
+Para ambientes com bloqueio SSL/proxy corporativo onde o Argos não consegue baixar pacotes:
+
+1. Ative modo offline no `.env`:
+```
+TRANSLATION_OFFLINE_ONLY=true
+```
+2. Baixe manualmente os pacotes `.argosmodel` em uma máquina com acesso:
+  - Site: https://www.argosopentech.com/argospm/index/
+  - Ex: English→Portuguese, English→Spanish
+3. Coloque os arquivos em `models/argos/` (pasta é criada automaticamente)
+4. Reinicie a aplicação; na inicialização os pacotes locais serão instalados (log: *Installing local Argos package*)
+
+Download automatizado (quando SSL permitido):
+```
+python scripts/download_argos_packages.py --pairs en:pt pt:en en:es es:en
+```
+
+Variáveis relevantes (`.env`):
+| Variável | Descrição | Default |
+|----------|-----------|---------|
+| TRANSLATION_OFFLINE_ONLY | Não tenta index/download online Argos | false |
+| ARGOS_PACKAGES_DIR (implícito via settings) | Diretório de pacotes locais | models/argos |
+
+Sem pacotes instalados e com falha online, o sistema usa dicionário fallback interno (qualidade limitada).
+
 ## Uso
 
 1. Acesse a página inicial e envie um arquivo de vídeo/áudio.

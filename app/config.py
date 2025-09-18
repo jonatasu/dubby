@@ -19,6 +19,8 @@ class Settings(BaseSettings):
 
     # Translation
     translation_backend: str = Field(default="argos", description="argos|marian")
+    translation_offline_only: bool = Field(default=False, description="If true, never attempt online Argos index/download")
+    argos_packages_dir: Path = Field(default=Path("models/argos"), description="Directory with pre-downloaded .argosmodel files")
 
     # TTS/Voice
     tts_backend: str = Field(default="fallback", description="fallback|openvoice|elevenlabs")

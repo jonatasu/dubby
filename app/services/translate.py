@@ -1,8 +1,11 @@
 """Translation service using argostranslate."""
 
 import logging
+import os
+from pathlib import Path
 import argostranslate.package
 import argostranslate.translate
+from ..config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -22,35 +25,57 @@ LANGUAGE_MAP = {
     "hi": "hi",
 }
 
+_FAILED_PAIRS: set[tuple[str, str]] = set()
+_OFFLINE_ONLY = settings.translation_offline_only or os.getenv("TRANSLATION_OFFLINE_ONLY", "false").lower() in {"1", "true", "yes"}
+
+
 def ensure_translation_package(from_lang: str, to_lang: str) -> bool:
-    """Ensure the translation package is installed."""
+    """Ensure the translation package is installed.
+
+    Adds:
+        - Offline-only mode: skips remote index/download attempts if TRANSLATION_OFFLINE_ONLY=true.
+        - Failure cache: don't retry same pair repeatedly within one process (avoids log spam).
+    """
+    pair = (from_lang, to_lang)
+    if pair in _FAILED_PAIRS:
+        return False
     try:
-        # Check if package is already installed
-        installed_packages = argostranslate.package.get_installed_packages()
-        for package in installed_packages:
+        # Already installed?
+        for package in argostranslate.package.get_installed_packages():
             if package.from_code == from_lang and package.to_code == to_lang:
-                logger.info(f"Translation package {from_lang}->{to_lang} already installed")
+                logger.debug(f"Translation package {from_lang}->{to_lang} already installed")
                 return True
-        
-        # Try to install from available packages
-        available_packages = argostranslate.package.get_available_packages()
-        target_package = None
-        
-        for package in available_packages:
-            if package.from_code == from_lang and package.to_code == to_lang:
-                target_package = package
-                break
-        
-        if target_package:
-            logger.info(f"Installing translation package {from_lang}->{to_lang}")
+
+        if _OFFLINE_ONLY:
+            logger.info(f"Offline-only mode: skipping online fetch for {from_lang}->{to_lang}")
+            _FAILED_PAIRS.add(pair)
+            return False
+
+        # Remote availability query
+        try:
+            available_packages = argostranslate.package.get_available_packages()
+        except Exception as e:
+            logger.warning(f"Could not fetch available packages ({e}); marking pair as failed once.")
+            _FAILED_PAIRS.add(pair)
+            return False
+
+        target_package = next((p for p in available_packages if p.from_code == from_lang and p.to_code == to_lang), None)
+        if not target_package:
+            logger.warning(f"Translation package {from_lang}->{to_lang} not in index")
+            _FAILED_PAIRS.add(pair)
+            return False
+
+        logger.info(f"Installing translation package {from_lang}->{to_lang}")
+        try:
             argostranslate.package.install_from_path(target_package.download())
             return True
-        else:
-            logger.warning(f"Translation package {from_lang}->{to_lang} not available")
+        except Exception as e:
+            logger.error(f"Download/install failed for {from_lang}->{to_lang}: {e}")
+            _FAILED_PAIRS.add(pair)
             return False
-            
     except Exception as e:
         logger.error(f"Error ensuring translation package {from_lang}->{to_lang}: {e}")
+        _FAILED_PAIRS.add(pair)
         return False
 
 
@@ -60,8 +85,7 @@ def translate_text(text: str, source_lang: str = "en", target_lang: str = "pt") 
         # Map language codes
         source = LANGUAGE_MAP.get(source_lang, source_lang)
         target = LANGUAGE_MAP.get(target_lang, target_lang)
-        
-        logger.info(f"Translating from {source} to {target}: '{text[:100]}...'")
+        logger.debug(f"Translating from {source} to {target}: '{text[:100]}...'")
         
         # Skip translation if source and target are the same
         if source == target:
@@ -78,7 +102,7 @@ def translate_text(text: str, source_lang: str = "en", target_lang: str = "pt") 
         translated_text = argostranslate.translate.translate(text, source, target)
         
         if translated_text and translated_text.strip():
-            logger.info(f"Translation successful: '{text[:50]}...' -> '{translated_text[:50]}...'")
+            logger.debug(f"Translation successful: '{text[:50]}...' -> '{translated_text[:50]}...'")
             return translated_text
         else:
             logger.warning("Empty translation result, using fallback")
@@ -86,7 +110,9 @@ def translate_text(text: str, source_lang: str = "en", target_lang: str = "pt") 
             
     except Exception as e:
         logger.error(f"Translation failed: {e}, using fallback")
-        return _fallback_translate(text, source, target)
+        safe_source = locals().get('source', source_lang)
+        safe_target = locals().get('target', target_lang)
+        return _fallback_translate(text, safe_source, safe_target)
 
 
 def _fallback_translate(text: str, source_lang: str, target_lang: str) -> str:
@@ -530,14 +556,29 @@ def initialize_translation_service() -> None:
     """Initialize translation service by updating package index."""
     try:
         logger.info("Initializing argostranslate translation service...")
-        argostranslate.package.update_package_index()
-        
-        # Pre-install common language pairs
+
+        # 1. Instalar pacotes locais se existirem (offline friendly)
+        pkg_dir: Path = settings.argos_packages_dir
+        if pkg_dir.exists():
+            for model_file in pkg_dir.glob("*.argosmodel"):
+                try:
+                    logger.info(f"Installing local Argos package: {model_file.name}")
+                    argostranslate.package.install_from_path(model_file)
+                except Exception as e:
+                    logger.warning(f"Failed to install local package {model_file.name}: {e}")
+
+        if not _OFFLINE_ONLY:
+            try:
+                argostranslate.package.update_package_index()
+            except Exception as e:
+                logger.warning(f"Could not update package index (continuing offline): {e}")
+
+        # 2. Pré-instalação de pares comuns (respeita offline flag e cache de falhas)
         common_pairs = [("en", "pt"), ("pt", "en"), ("en", "es"), ("es", "en")]
         for from_lang, to_lang in common_pairs:
             ensure_translation_package(from_lang, to_lang)
-        
-        logger.info("Translation service initialized successfully")
+
+        logger.info("Translation service initialized (offline_only=%s)" % _OFFLINE_ONLY)
             
     except Exception as e:
         logger.error(f"Error initializing translation service: {e}")
