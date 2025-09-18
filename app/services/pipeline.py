@@ -7,6 +7,7 @@ from .media import extract_audio, mux_video_with_audio, has_ffmpeg
 from .asr import transcribe
 from .translate import translate_text
 from .tts import synthesize_segments, save_wav
+import os
 from ..config import settings
 
 
@@ -31,8 +32,18 @@ async def process_media(input_media: Path, src_lang: str, dst_lang: str, audio_o
         if len(translated_segments) <= 3:  # Debug apenas os primeiros 3
             print(f"  [TRAD {source_language}->{dst_lang}] '{seg.text}' -> '{text}'")
 
-    # 4) TTS/clonagem de voz (com idioma de destino)
+    # 4) TTS / voice cloning (placeholder: future OpenVoice integration)
     print(f"[DEBUG] Gerando TTS em {dst_lang} para {len(translated_segments)} segmentos traduzidos")
+
+    # Detect potential OpenVoice model presence (simple heuristic)
+    openvoice_dir = settings.models_dir / "openvoice"
+    voice_clone_available = openvoice_dir.exists() and any(openvoice_dir.glob("*.pt"))
+    if voice_clone_available:
+        print(f"[DEBUG] Modelos OpenVoice detectados ({len(list(openvoice_dir.glob('*.pt')))} arquivos). Clonagem de voz poderá ser aplicada em etapa futura.")
+    else:
+        print("[DEBUG] Nenhum modelo OpenVoice detectado. Usando TTS padrão.")
+
+    # For now we call the existing synthesize_segments (pyttsx3 or fallback)
     audio = synthesize_segments(translated_segments, target_language=dst_lang, sr=16000)
     dubbed_wav = settings.outputs_dir / f"{input_media.stem}.dubbed.wav"
     save_wav(dubbed_wav, audio, sr=16000)

@@ -12,6 +12,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     espeak-data \
     pulseaudio \
     alsa-utils \
+    libsndfile1 \
     git \
     curl \
     wget \

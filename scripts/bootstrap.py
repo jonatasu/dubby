@@ -102,7 +102,7 @@ def download_asr_model(python_exe):
     run_command(f"{python_exe} scripts/download_whisper_model.py", "Downloading ASR model")
     logger.info("✓ ASR model downloaded")
 
-def initialize_translation_models(python_exe):
+def initialize_translation_models(python_exe: Path):
     """Initialize translation models."""
     logger.info("Initializing translation service...")
     cmd = f'{python_exe} -c "from app.services.translate import initialize_translation_service; initialize_translation_service()"'
@@ -111,6 +111,22 @@ def initialize_translation_models(python_exe):
     else:
         logger.warning("⚠ Translation service initialization failed, will be done at runtime")
 
+    def download_openvoice_models(python_exe: Path):
+        """Download OpenVoice voice cloning models (optional)."""
+        logger.info("Checking OpenVoice models (optional)...")
+        models_dir = Path("models") / "openvoice"
+        if models_dir.exists() and any(models_dir.glob("*.pt")):
+            logger.info("✓ OpenVoice models already present")
+            return
+        script_path = Path(__file__).parent / "download_openvoice_models.py"
+        if not script_path.exists():
+            logger.info("OpenVoice download script not found, skipping (feature optional)")
+            return
+        if run_command(f"{python_exe} {script_path}", "Downloading OpenVoice models", exit_on_error=False):
+            logger.info("✓ OpenVoice models downloaded")
+        else:
+            logger.warning("⚠ Failed to download OpenVoice models (feature will fallback to standard TTS)")
+
 def create_directories():
     """Create necessary directories."""
     directories = ["uploads", "outputs", "logs", "models"]
@@ -118,7 +134,7 @@ def create_directories():
         Path(directory).mkdir(exist_ok=True)
         logger.info(f"✓ Created directory: {directory}")
 
-def test_basic_functionality(python_exe):
+def test_basic_functionality(python_exe: Path):
     """Test basic functionality."""
     logger.info("Testing basic functionality...")
     
@@ -155,6 +171,7 @@ def main():
     create_directories()
     download_asr_model(python_exe)
     initialize_translation_models(python_exe)
+    download_openvoice_models(python_exe)
     
     # Test functionality
     if test_basic_functionality(python_exe):

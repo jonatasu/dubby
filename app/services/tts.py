@@ -205,6 +205,64 @@ def synthesize_segments(segments: list[tuple[float, float, str]], target_languag
     return np.zeros(1, dtype=np.float32)
 
 
+# === Experimental OpenVoice Integration ======================================================
+def _openvoice_available() -> bool:
+    """Return True if OpenVoice models appear to be present and library importable."""
+    models_dir = settings.models_dir / "openvoice"
+    if not models_dir.exists():
+        return False
+    if not any(models_dir.glob('*.pt')):
+        return False
+    try:
+        import openvoice  # type: ignore
+    except Exception:
+        return False
+    return True
+
+
+def synthesize_segments_voice_clone(
+    segments: list[tuple[float, float, str]],
+    reference_wav: Path,
+    target_language: str = 'pt',
+    sr: int = 16000
+) -> np.ndarray:
+    """Attempt to synthesize segments using OpenVoice voice cloning.
+
+    Falls back to standard synthesize_segments if anything fails.
+    NOTE: This is a minimal placeholder; a full integration would load proper
+    multilingual voice + tone color converter pipelines per OpenVoice docs.
+    """
+    if not _openvoice_available():
+        logger.info("OpenVoice indisponível ou modelos ausentes, fallback para TTS padrão")
+        return synthesize_segments(segments, target_language=target_language, sr=sr)
+
+    try:
+        import soundfile as sf  # local import to minimize overhead if unavailable
+        import numpy as np  # noqa: F401 (already imported but keeps clarity)
+        # Pseudo pipeline (placeholder): real implementation would:
+        # 1. Extract speaker embedding from reference_wav
+        # 2. For cada segmento traduzido gerar mel spectrogram
+        # 3. Use vocoder / conversion model to produce waveform preserving timbre
+        # For now: call normal TTS then apply simple EQ-like shaping to approximate a distinct timbre.
+        base_audio = synthesize_segments(segments, target_language=target_language, sr=sr)
+        if len(base_audio) == 0:
+            return base_audio
+
+        # Placeholder timbre shaping: high-shelf style attenuation and mild formant-ish emphasis
+        import scipy.signal
+        b, a = scipy.signal.butter(4, 0.15)
+        shaped = scipy.signal.lfilter(b, a, base_audio)
+        # Mix original and shaped for a subtle effect
+        mixed = 0.6 * base_audio + 0.4 * shaped
+        if np.max(np.abs(mixed)) > 0:
+            mixed = mixed / np.max(np.abs(mixed)) * 0.9
+        logger.info("OpenVoice placeholder aplicado (ajuste tímbrico simples)")
+        return mixed.astype(np.float32)
+    except Exception as e:
+        logger.warning(f"Falha na clonagem de voz experimental: {e}. Usando fallback.")
+        return synthesize_segments(segments, target_language=target_language, sr=sr)
+
+
 def save_wav(wav_path: Path, audio: np.ndarray, sr: int = 16000) -> Path:
     wav_path.parent.mkdir(parents=True, exist_ok=True)
     sf.write(str(wav_path), audio, sr)
