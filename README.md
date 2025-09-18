@@ -462,16 +462,21 @@ make test
 Para ambientes com bloqueio SSL/proxy corporativo onde o Argos não consegue baixar pacotes:
 
 1. Ative modo offline no `.env`:
+
 ```
 TRANSLATION_OFFLINE_ONLY=true
 ```
+
 2. Baixe manualmente os pacotes `.argosmodel` em uma máquina com acesso:
-  - Site: https://www.argosopentech.com/argospm/index/
-  - Ex: English→Portuguese, English→Spanish
+
+- Site: https://www.argosopentech.com/argospm/index/
+- Ex: English→Portuguese, English→Spanish
+
 3. Coloque os arquivos em `models/argos/` (pasta é criada automaticamente)
-4. Reinicie a aplicação; na inicialização os pacotes locais serão instalados (log: *Installing local Argos package*)
+4. Reinicie a aplicação; na inicialização os pacotes locais serão instalados (log: _Installing local Argos package_)
 
 Download automatizado (quando SSL permitido):
+
 ```
 python scripts/download_argos_packages.py --pairs en:pt pt:en en:es es:en
 ```
