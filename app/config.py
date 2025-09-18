@@ -22,6 +22,13 @@ class Settings(BaseSettings):
     translation_offline_only: bool = Field(default=False, description="If true, never attempt online Argos index/download")
     argos_packages_dir: Path = Field(default=Path("models/argos"), description="Directory with pre-downloaded .argosmodel files")
 
+    # Upload constraints
+    max_upload_mb: int = Field(default=200, description="Maximum upload size in MB")
+    allowed_upload_extensions: str = Field(
+        default=".mp4,.mov,.m4a,.mp3,.wav",
+        description="Comma-separated list of allowed file extensions"
+    )
+
     # TTS/Voice
     tts_backend: str = Field(default="fallback", description="fallback|openvoice|elevenlabs")
     elevenlabs_api_key: str | None = None

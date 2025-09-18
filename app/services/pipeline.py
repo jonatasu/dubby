@@ -94,3 +94,10 @@ async def process_media(input_media: Path, src_lang: str, dst_lang: str, audio_o
     JOB_STATUS[job_id]["output"] = str(output_path)
     log_event("pipeline_complete", job_id=job_id, output=str(output_path), total_seconds=total)
     return output_path
+
+
+async def run_pipeline(input_media: Path, src_lang: str = "auto", dst_lang: str = "en", audio_only: bool | None = None) -> tuple[str, Path]:
+    """Wrapper that executes the pipeline returning (job_id, output_path)."""
+    job_id = uuid.uuid4().hex
+    output = await process_media(input_media, src_lang, dst_lang, audio_only=audio_only, job_id=job_id)
+    return job_id, output

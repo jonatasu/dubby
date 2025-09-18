@@ -314,24 +314,28 @@ Você pode correlacionar esse `job_id` com os logs estruturados (todos incluem `
 
 Endpoint `/api/status` agora acrescenta:
 ```
+
 "metrics": {"translate_fail": <int>, "tts_fail": <int>, "mux_fail": <int>},
 "recent_jobs": [
-  {
-    "job_id": "...",
-    "state": "completed",
-    "total_seconds": 12.34,
-    "output": "outputs/input.dubbed.mp4",
-    "phases": [ {"phase": "asr", "seconds": 2.1}, ... ]
-  }
+{
+"job_id": "...",
+"state": "completed",
+"total_seconds": 12.34,
+"output": "outputs/input.dubbed.mp4",
+"phases": [ {"phase": "asr", "seconds": 2.1}, ... ]
+}
 ]
+
 ```
 Limite padrão: últimos 5 jobs em memória (não persistido).
 
 Exemplo curl para capturar o Job ID:
 ```
+
 curl -D headers.txt -F file=@tests/fixtures/sample.mp4 \
-     -F src_lang=auto -F dst_lang=pt http://localhost:8000/api/process -o result.mp4
+ -F src_lang=auto -F dst_lang=pt http://localhost:8000/api/process -o result.mp4
 grep X-Job-ID headers.txt
+
 ```
 
 # Logs Docker
