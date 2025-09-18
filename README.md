@@ -304,6 +304,36 @@ Cada execução agora emite logs estruturados (dict) com eventos:
 `pipeline_start`, `phase_end` (extract_audio, asr, translate, tts_clone, mux), samples (`asr_sample`, `translate_sample`) e `pipeline_complete`.
 Use um parser JSON ou grep por `event": "phase_end` para medir tempos.
 
+#### Job ID e Métricas
+
+Ao enviar um arquivo via `/api/process` a resposta continua sendo o arquivo final (download direto), porém agora inclui o header:
+
+`X-Job-ID: <job_id_hex>`
+
+Você pode correlacionar esse `job_id` com os logs estruturados (todos incluem `job_id`).
+
+Endpoint `/api/status` agora acrescenta:
+```
+"metrics": {"translate_fail": <int>, "tts_fail": <int>, "mux_fail": <int>},
+"recent_jobs": [
+  {
+    "job_id": "...",
+    "state": "completed",
+    "total_seconds": 12.34,
+    "output": "outputs/input.dubbed.mp4",
+    "phases": [ {"phase": "asr", "seconds": 2.1}, ... ]
+  }
+]
+```
+Limite padrão: últimos 5 jobs em memória (não persistido).
+
+Exemplo curl para capturar o Job ID:
+```
+curl -D headers.txt -F file=@tests/fixtures/sample.mp4 \
+     -F src_lang=auto -F dst_lang=pt http://localhost:8000/api/process -o result.mp4
+grep X-Job-ID headers.txt
+```
+
 # Logs Docker
 docker logs container_name
 
