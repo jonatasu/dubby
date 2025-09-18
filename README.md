@@ -337,7 +337,48 @@ curl http://localhost:8000/health
   - GHCR publishing
   - Health checks
 
-### 🔮 Roadmap Futuro
+### � Experimental: Voice Cloning (OpenVoice)
+
+Status: camada experimental adicionada. Atualmente executa fallback (pyttsx3 ou tom) até que
+modelos e runtime OpenVoice estejam presentes. Nenhuma quebra se ausente.
+
+Como funciona (pipeline alvo):
+1. Extrai áudio original (referência de voz)
+2. Calcula embedding / cor de timbre (futuro)
+3. Gera fala no idioma traduzido preservando timbre (futuro)
+
+Hoje: wrapper detecta modelos em `models/openvoice/*.pt` e tenta carregar runtime. Se indisponível, retorna ao TTS padrão.
+
+Variáveis / Config:
+| Chave (Settings / .env) | Descrição | Default |
+|-------------------------|-----------|---------|
+| `VOICE_CLONE_ENABLED` (voice_clone_enabled) | Liga/desliga tentativa de clonagem | true |
+| `OPENVOICE_MODELS_DIR` (openvoice_models_dir) | Pasta dos modelos OpenVoice | models/openvoice |
+| `OPENVOICE_CLI_COMMAND` (openvoice_cli_command) | Nome do comando CLI | openvoice |
+
+Instalação dos modelos:
+```
+python scripts/download_openvoice_models.py
+```
+Se bloqueado (proxy/SSL), baixe manualmente os arquivos `.pt` e coloque em `models/openvoice`.
+
+Fallback & Segurança:
+- Sem modelos ou CLI: log informa e segue com TTS nativo.
+- Erros internos não interrompem pipeline de dublagem.
+
+Limitações atuais:
+- Não gera timbre real: placeholder apenas.
+- Não há ajuste fino de prosódia ou alinhamento fonético.
+- Próximo passo: integrar pipeline oficial (encoder + tone color + vocoder).
+
+Roadmap de Clonagem:
+- [ ] Carregamento real dos módulos OpenVoice
+- [ ] Extração de embedding do falante
+- [ ] Geração multi-idioma com preservação de pitch
+- [ ] Ajuste de duração vs timestamps ASR (forçar encaixe natural)
+- [ ] Cache de embeddings por arquivo
+
+### �🔮 Roadmap Futuro
 
 - [ ] **Voice Cloning** (OpenVoice, RVC, Coqui TTS)
 - [ ] **Tradução melhorada** (Google Translate API, Azure)

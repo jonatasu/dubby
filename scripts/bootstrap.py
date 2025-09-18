@@ -111,21 +111,53 @@ def initialize_translation_models(python_exe: Path):
     else:
         logger.warning("⚠ Translation service initialization failed, will be done at runtime")
 
-    def download_openvoice_models(python_exe: Path):
-        """Download OpenVoice voice cloning models (optional)."""
-        logger.info("Checking OpenVoice models (optional)...")
-        models_dir = Path("models") / "openvoice"
-        if models_dir.exists() and any(models_dir.glob("*.pt")):
-            logger.info("✓ OpenVoice models already present")
-            return
-        script_path = Path(__file__).parent / "download_openvoice_models.py"
-        if not script_path.exists():
-            logger.info("OpenVoice download script not found, skipping (feature optional)")
-            return
-        if run_command(f"{python_exe} {script_path}", "Downloading OpenVoice models", exit_on_error=False):
-            logger.info("✓ OpenVoice models downloaded")
-        else:
-            logger.warning("⚠ Failed to download OpenVoice models (feature will fallback to standard TTS)")
+def download_openvoice_models(python_exe: Path):
+    """Download OpenVoice voice cloning models (optional)."""
+    logger.info("Checking OpenVoice models (optional)...")
+    models_dir = Path("models") / "openvoice"
+    if models_dir.exists() and any(models_dir.glob("*.pt")):
+        logger.info("✓ OpenVoice models already present")
+        return
+    script_path = Path(__file__).parent / "download_openvoice_models.py"
+    if not script_path.exists():
+        logger.info("OpenVoice download script not found, skipping (feature optional)")
+        return
+    if run_command(f"{python_exe} {script_path}", "Downloading OpenVoice models", exit_on_error=False):
+        logger.info("✓ OpenVoice models downloaded")
+    else:
+        logger.warning("⚠ Failed to download OpenVoice models (feature will fallback to standard TTS)")
+
+def check_openvoice_capabilities():
+    """Log a concise summary of OpenVoice cloning capability status."""
+    try:
+        from app.config import settings as app_settings
+    except Exception:
+        logger.warning("Could not import app settings to verify OpenVoice capability")
+        return
+    enabled = app_settings.voice_clone_enabled
+    models_dir = app_settings.openvoice_models_dir
+    has_models = models_dir.exists() and any(models_dir.glob('*.pt'))
+    cli_ok = False
+    if enabled:
+        try:
+            import openvoice  # type: ignore  # noqa: F401
+            cli_ok = True
+        except Exception:
+            # fallback check: CLI command
+            cmd = app_settings.openvoice_cli_command
+            try:
+                res = subprocess.run([cmd, '--help'], capture_output=True, text=True, timeout=5)
+                cli_ok = res.returncode == 0
+            except Exception:
+                cli_ok = False
+    status = {
+        "enabled": enabled,
+        "models_present": has_models,
+        "runtime_available": cli_ok,
+    }
+    logger.info(f"OpenVoice capability: enabled={status['enabled']} models={status['models_present']} runtime={status['runtime_available']}")
+    if enabled and (not has_models or not cli_ok):
+        logger.info("Voice cloning will FALLBACK to standard TTS until models+runtime are ready.")
 
 def create_directories():
     """Create necessary directories."""
@@ -172,6 +204,7 @@ def main():
     download_asr_model(python_exe)
     initialize_translation_models(python_exe)
     download_openvoice_models(python_exe)
+    check_openvoice_capabilities()
     
     # Test functionality
     if test_basic_functionality(python_exe):
