@@ -9,6 +9,11 @@ import os
 import logging
 
 from ..config import settings
+from .voice_clone import (
+    synthesize_segments_voice_clone as vc_clone,
+    is_openvoice_ready,
+    spectral_clone_segments
+)
 
 logger = logging.getLogger(__name__)
 
@@ -176,8 +181,8 @@ def synthesize_segment(text: str, language: str = 'pt', sr: int = 16000, duratio
 
 
 def synthesize_segments(segments: list[tuple[float, float, str]], target_language: str = 'pt', sr: int = 16000) -> np.ndarray:
-    """Concatena áudios por segmento, tentando aproximar o timing."""
-    logger.info(f"Sintetizando {len(segments)} segmentos em {target_language}")
+    """Concatena áudios por segmento, tentando aproximar o timing (sem clonagem)."""
+    logger.info(f"[TTS-base] Sintetizando {len(segments)} segmentos em {target_language}")
     
     out = []
     for i, (start, end, text) in enumerate(segments):
@@ -220,47 +225,35 @@ def _openvoice_available() -> bool:
     return True
 
 
-def synthesize_segments_voice_clone(
+def synthesize_segments_with_clone(
     segments: list[tuple[float, float, str]],
     reference_wav: Path,
     target_language: str = 'pt',
     sr: int = 16000
 ) -> np.ndarray:
-    """Attempt to synthesize segments using OpenVoice voice cloning.
+    """Wrapper que tenta clonagem de voz (OpenVoice ou spectral) antes de fallback."""
+    mode = getattr(settings, 'voice_clone_mode', 'baseline')
+    # 1) OpenVoice real se habilitado e disponível
+    if settings.voice_clone_enabled and mode in ("openvoice", "baseline") and is_openvoice_ready():
+        logger.info("Tentando clonagem de voz (OpenVoice)")
+        cloned = vc_clone(segments, reference_wav, target_language=target_language, sr=sr)
+        if cloned is not None:
+            return cloned
+        logger.info("Clonagem OpenVoice não produziu áudio, tentando demais modos...")
 
-    Falls back to standard synthesize_segments if anything fails.
-    NOTE: This is a minimal placeholder; a full integration would load proper
-    multilingual voice + tone color converter pipelines per OpenVoice docs.
-    """
-    if not _openvoice_available():
-        logger.info("OpenVoice indisponível ou modelos ausentes, fallback para TTS padrão")
-        return synthesize_segments(segments, target_language=target_language, sr=sr)
+    # 2) Modo spectral (pseudo-clone) – aplica perfil sobre TTS base
+    if settings.voice_clone_enabled and mode in ("spectral", "baseline"):
+        logger.info("Aplicando modo spectral de clonagem (pseudo timbre)")
+        base = synthesize_segments(segments, target_language=target_language, sr=sr)
+        try:
+            enhanced = spectral_clone_segments(base, reference_wav, sr)
+            return enhanced
+        except Exception as e:
+            logger.warning(f"Falha no modo spectral: {e}. Fallback para áudio base.")
+            return base
 
-    try:
-        import soundfile as sf  # local import to minimize overhead if unavailable
-        import numpy as np  # noqa: F401 (already imported but keeps clarity)
-        # Pseudo pipeline (placeholder): real implementation would:
-        # 1. Extract speaker embedding from reference_wav
-        # 2. For cada segmento traduzido gerar mel spectrogram
-        # 3. Use vocoder / conversion model to produce waveform preserving timbre
-        # For now: call normal TTS then apply simple EQ-like shaping to approximate a distinct timbre.
-        base_audio = synthesize_segments(segments, target_language=target_language, sr=sr)
-        if len(base_audio) == 0:
-            return base_audio
-
-        # Placeholder timbre shaping: high-shelf style attenuation and mild formant-ish emphasis
-        import scipy.signal
-        b, a = scipy.signal.butter(4, 0.15)
-        shaped = scipy.signal.lfilter(b, a, base_audio)
-        # Mix original and shaped for a subtle effect
-        mixed = 0.6 * base_audio + 0.4 * shaped
-        if np.max(np.abs(mixed)) > 0:
-            mixed = mixed / np.max(np.abs(mixed)) * 0.9
-        logger.info("OpenVoice placeholder aplicado (ajuste tímbrico simples)")
-        return mixed.astype(np.float32)
-    except Exception as e:
-        logger.warning(f"Falha na clonagem de voz experimental: {e}. Usando fallback.")
-        return synthesize_segments(segments, target_language=target_language, sr=sr)
+    # 3) Fallback puro
+    return synthesize_segments(segments, target_language=target_language, sr=sr)
 
 
 def save_wav(wav_path: Path, audio: np.ndarray, sr: int = 16000) -> Path:

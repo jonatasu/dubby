@@ -337,46 +337,71 @@ curl http://localhost:8000/health
   - GHCR publishing
   - Health checks
 
-### � Experimental: Voice Cloning (OpenVoice)
+### 🔬 Experimental: Voice Cloning (OpenVoice & Spectral)
 
-Status: camada experimental adicionada. Atualmente executa fallback (pyttsx3 ou tom) até que
-modelos e runtime OpenVoice estejam presentes. Nenhuma quebra se ausente.
+Status geral: camada de clonagem experimental suporta dois caminhos:
 
-Como funciona (pipeline alvo):
-1. Extrai áudio original (referência de voz)
-2. Calcula embedding / cor de timbre (futuro)
-3. Gera fala no idioma traduzido preservando timbre (futuro)
+1. `openvoice` (ainda placeholder – aguarda modelos reais)
+2. `spectral` (Fase 1) pseudo-clone: ajusta pitch e brilho espectral do áudio TTS gerado com base em um perfil da voz original.
 
-Hoje: wrapper detecta modelos em `models/openvoice/*.pt` e tenta carregar runtime. Se indisponível, retorna ao TTS padrão.
+#### Pipeline Alvo (OpenVoice completo)
+1. Extrair áudio original (referência)
+2. Gerar embedding / “tone color”
+3. Converter texto traduzido em mel + vocoder com timbre preservado
+4. Ajustar duração para casar com timestamps ASR
 
-Variáveis / Config:
-| Chave (Settings / .env) | Descrição | Default |
-|-------------------------|-----------|---------|
-| `VOICE_CLONE_ENABLED` (voice_clone_enabled) | Liga/desliga tentativa de clonagem | true |
-| `OPENVOICE_MODELS_DIR` (openvoice_models_dir) | Pasta dos modelos OpenVoice | models/openvoice |
-| `OPENVOICE_CLI_COMMAND` (openvoice_cli_command) | Nome do comando CLI | openvoice |
+#### Modo Spectral (implementado nesta fase)
+O modo `spectral` cria um perfil simples da voz de referência:
+- `pitch` (estimativa fundamental via autocorrelação simplificada)
+- `energy` (RMS)
+- `centroid` (centro espectral)
 
-Instalação dos modelos:
+Em seguida aplica sobre o áudio TTS base:
+- Pitch shift leve (misturado pela intensidade `voice_clone_pitch_strength`)
+- Filtro de modelagem espectral (ajuste de brilho/formant simplificado – intensidade `voice_clone_formant_strength`)
+
+Objetivo: aproximar o timbre/altura original sem dependências pesadas enquanto a clonagem neural real não chega.
+
+#### Configuração (variáveis / .env)
+| Chave (.env / Settings) | Descrição | Valores / Exemplo | Default |
+|-------------------------|-----------|-------------------|---------|
+| `VOICE_CLONE_ENABLED` | Liga/desliga qualquer tentativa de clonagem | true / false | true |
+| `VOICE_CLONE_MODE` (`voice_clone_mode`) | Estratégia | baseline | baseline |
+|  |  | spectral (pseudo timbre) |  |
+|  |  | openvoice (quando modelos prontos) |  |
+| `VOICE_CLONE_PITCH_STRENGTH` (`voice_clone_pitch_strength`) | 0–1 intensidade do ajuste de pitch | 0.0–1.0 | 0.7 |
+| `VOICE_CLONE_FORMANT_STRENGTH` (`voice_clone_formant_strength`) | 0–1 intensidade de brilho/formant | 0.0–1.0 | 0.5 |
+| `OPENVOICE_MODELS_DIR` | Pasta de modelos OpenVoice | caminho | models/openvoice |
+| `OPENVOICE_CLI_COMMAND` | Nome do binário CLI | openvoice | openvoice |
+
+Exemplo `.env` para modo spectral:
+```
+VOICE_CLONE_ENABLED=true
+VOICE_CLONE_MODE=spectral
+VOICE_CLONE_PITCH_STRENGTH=0.6
+VOICE_CLONE_FORMANT_STRENGTH=0.4
+```
+
+#### Instalação de modelos OpenVoice (quando usar o modo openvoice)
 ```
 python scripts/download_openvoice_models.py
 ```
-Se bloqueado (proxy/SSL), baixe manualmente os arquivos `.pt` e coloque em `models/openvoice`.
+Se bloqueado (proxy/SSL), baixe os arquivos `.pt` manualmente e coloque em `models/openvoice`.
 
-Fallback & Segurança:
-- Sem modelos ou CLI: log informa e segue com TTS nativo.
-- Erros internos não interrompem pipeline de dublagem.
+#### Fallback & Segurança
+- Ausência de modelos/CLI ou erros → fallback automático para TTS nativo
+- Erros não interrompem pipeline de dublagem
 
-Limitações atuais:
-- Não gera timbre real: placeholder apenas.
-- Não há ajuste fino de prosódia ou alinhamento fonético.
-- Próximo passo: integrar pipeline oficial (encoder + tone color + vocoder).
+#### Limitações Atuais
+- Modo spectral NÃO preserva exatamente voz (apenas heurística de pitch + brilho)
+- Sem alinhamento fonético ou prosódia neural
+- OpenVoice ainda não gera áudio real (placeholder)
 
-Roadmap de Clonagem:
-- [ ] Carregamento real dos módulos OpenVoice
-- [ ] Extração de embedding do falante
-- [ ] Geração multi-idioma com preservação de pitch
-- [ ] Ajuste de duração vs timestamps ASR (forçar encaixe natural)
-- [ ] Cache de embeddings por arquivo
+#### Roadmap Próximo
+- [ ] Substituir placeholder OpenVoice por pipeline real (encoder + tone color + vocoder)
+- [ ] Cache de embeddings / perfis
+- [ ] Ajuste dinâmico de duração por segmento (DTW / time-stretch controlado)
+- [ ] Parâmetros avançados (pitch target override, preservação de energia)
 
 ### �🔮 Roadmap Futuro
 
