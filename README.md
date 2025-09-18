@@ -299,6 +299,11 @@ docker run --user $(id -u):$(id -g) ...
 export DEBUG=1
 uvicorn app.main:app --log-level debug
 
+### Observabilidade de Pipeline
+Cada execução agora emite logs estruturados (dict) com eventos:
+`pipeline_start`, `phase_end` (extract_audio, asr, translate, tts_clone, mux), samples (`asr_sample`, `translate_sample`) e `pipeline_complete`.
+Use um parser JSON ou grep por `event": "phase_end` para medir tempos.
+
 # Logs Docker
 docker logs container_name
 
